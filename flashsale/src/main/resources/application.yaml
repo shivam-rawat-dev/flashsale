@@ -1,3 +1,62 @@
 spring:
   application:
     name: flashsale
+
+  # PostgreSQL Data Source
+  datasource:
+    url: jdbc:postgresql://localhost:5432/flashsale_db
+    username: postgres
+    password: postgrespassword
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+
+  # Legacy Spring Boot 2.x Redis path
+  redis:
+    host: localhost
+    port: 6379
+    password: redispassword
+    timeout: 3000ms
+
+  # Spring Boot 3.x Redis path
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      password: redispassword
+      timeout: 3000ms
+
+  # RabbitMQ Configuration
+  rabbitmq:
+    build:
+      context: .
+      dockerfile: Dockerfile.rabbitmq
+    container_name: flashsale-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    ports:
+      - "5672:5672"    # AMQP Protocol Port
+      - "15672:15672"  # Management Web UI
+    networks:
+      - flashsale-network
+
+  # Apache Kafka Configuration
+  kafka:
+    bootstrap-servers: localhost:9092
+
+# Actuator Health Config
+management:
+  endpoint:
+    health:
+      show-details: always
+  endpoints:
+    web:
+      exposure:
+        include: health,metrics,prometheus,info

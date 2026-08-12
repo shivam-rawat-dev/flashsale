@@ -1,5 +1,3 @@
-version: '3.8'
-
 networks:
   flashsale-network:
     driver: bridge
@@ -46,14 +44,14 @@ services:
   # 3. Delay Queue Engine (RabbitMQ with Delayed Message Plugin)
   # -----------------------------------------------------------------
   rabbitmq:
-    image: heidiks/rabbitmq-delayed-message-exchange:3.11-management
+    image: rabbitmq:3-management
     container_name: flashsale-rabbitmq
     environment:
       RABBITMQ_DEFAULT_USER: guest
       RABBITMQ_DEFAULT_PASS: guest
     ports:
       - "5672:5672"    # AMQP Protocol Port
-      - "15672:15672"  # Management Web UI
+      - "15672:15672"  # Management Web UI Port
     networks:
       - flashsale-network
 

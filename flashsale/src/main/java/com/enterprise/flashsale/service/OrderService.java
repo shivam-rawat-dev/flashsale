@@ -19,7 +19,8 @@ public class OrderService {
     private static final String RESERVATION_KEY_PREFIX = "flashsale:reservation:";
 
     private final StringRedisTemplate redisTemplate;
-    private final KafkaTemplate<String, FlashSaleOrderEvent> kafkaTemplate;
+    // Updated type parameter from FlashSaleOrderEvent to Object
+    private final KafkaTemplate<String, Object> kafkaTemplate;
 
     @Value("${app.kafka.topics.flashsale-orders:flashsale-orders}")
     private String flashSaleOrdersTopic;

@@ -18,9 +18,9 @@ public class OutboxPublisherScheduler {
     private static final Logger log = LoggerFactory.getLogger(OutboxPublisherScheduler.class);
 
     private final OutboxRepository outboxRepository;
-    private final KafkaTemplate<String, String> kafkaTemplate;
+    private final KafkaTemplate<String, Object> kafkaTemplate;
 
-    public OutboxPublisherScheduler(OutboxRepository outboxRepository, KafkaTemplate<String, String> kafkaTemplate) {
+    OutboxPublisherScheduler(OutboxRepository outboxRepository, KafkaTemplate<String, Object> kafkaTemplate) {
         this.outboxRepository = outboxRepository;
         this.kafkaTemplate = kafkaTemplate;
     }

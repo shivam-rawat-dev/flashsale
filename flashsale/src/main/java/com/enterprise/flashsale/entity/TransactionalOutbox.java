@@ -6,12 +6,16 @@ import lombok.*;
 import java.time.Instant;
 import java.util.UUID;
 
+@Entity
+@Table(name = "transactional_outbox", indexes = {
+        // CRITICAL: Required for OutboxPublisherScheduler performance
+        @Index(name = "idx_outbox_processed_created", columnList = "processed, createdAt")
+})
 @Getter
 @Setter
-@Entity
 @AllArgsConstructor
-@Table(name = "transactional_outbox")
 @NoArgsConstructor
+@Builder
 public class TransactionalOutbox {
 
     @Id
@@ -29,9 +33,9 @@ public class TransactionalOutbox {
     @Column(columnDefinition = "TEXT", nullable = false)
     private String payload;
 
+    @Column(nullable = false)
     private boolean processed = false;
 
+    @Column(nullable = false, updatable = false)
     private Instant createdAt = Instant.now();
-
-
 }

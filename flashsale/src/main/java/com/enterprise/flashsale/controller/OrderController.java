@@ -1,26 +1,24 @@
 package com.enterprise.flashsale.controller;
 
+import com.enterprise.flashsale.dto.request.CheckoutRequest;
+import com.enterprise.flashsale.security.Idempotent;
 import com.enterprise.flashsale.service.OrderService;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.math.BigDecimal;
 import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/orders")
+@RequiredArgsConstructor
 public class OrderController {
 
     private final OrderService orderService;
 
-    public OrderController(OrderService orderService) {
-        this.orderService = orderService;
-    }
-
     @PostMapping("/checkout")
+    @Idempotent(ttlMinutes = 15)
     public ResponseEntity<Map<String, Object>> checkout(
             @RequestHeader(value = "X-User-Id", defaultValue = "1001") Long userId,
             @Valid @RequestBody CheckoutRequest request) {
@@ -33,15 +31,23 @@ public class OrderController {
         );
 
         return ResponseEntity.ok(Map.of(
-                "message", "Order successfully placed and finalized",
+                "message", "Order successfully placed and submitted for processing",
                 "orderId", orderId,
                 "status", "SUCCESS"
         ));
     }
 
-    public record CheckoutRequest(
-            @NotBlank String reservationId,
-            @NotNull Long itemId,
-            @NotNull BigDecimal amount
-    ) {}
+    @PostMapping("/{orderId}/payment-success")
+    @Idempotent(ttlMinutes = 15)
+
+    public ResponseEntity<Map<String, Object>> paymentSuccess(@PathVariable String orderId) {
+        orderService.confirmPaymentSuccess(orderId);
+        return ResponseEntity.ok(Map.of(
+                "orderId", orderId,
+                "status", "PAID",
+                "message", "Payment settled and inventory finalized"
+        ));
+    }
+
+
 }

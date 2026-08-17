@@ -2,13 +2,14 @@ package com.enterprise.flashsale.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
-import java.time.LocalDateTime;
+
+import java.time.Instant;
 
 @Entity
 @Table(
         name = "inventories",
         indexes = {
-                @Index(name = "idx_product_id", columnList = "product_id", unique = true)
+                @Index(name = "idx_inventory_product_id", columnList = "product_id", unique = true)
         }
 )
 @Getter
@@ -35,29 +36,57 @@ public class Inventory {
     private Integer reservedStock;
 
     /**
-     * Optimistic locking version field to prevent race conditions during concurrent orders.
+     * Optimistic locking version field to prevent race conditions during DB synchronization.
      */
     @Version
     @Column(name = "version", nullable = false)
     private Long version;
 
     @Column(name = "created_at", nullable = false, updatable = false)
-    private LocalDateTime createdAt;
+    private Instant createdAt;
 
     @Column(name = "updated_at", nullable = false)
-    private LocalDateTime updatedAt;
+    private Instant updatedAt;
 
     @PrePersist
     protected void onCreate() {
-        this.createdAt = LocalDateTime.now();
-        this.updatedAt = LocalDateTime.now();
+        Instant now = Instant.now();
+        this.createdAt = now;
+        this.updatedAt = now;
         if (this.reservedStock == null) {
             this.reservedStock = 0;
+        }
+        if (this.availableStock == null) {
+            this.availableStock = this.totalStock;
         }
     }
 
     @PreUpdate
     protected void onUpdate() {
-        this.updatedAt = LocalDateTime.now();
+        this.updatedAt = Instant.now();
+    }
+
+    // --- Domain Logic Methods ---
+
+    public boolean hasSufficientStock(int quantity) {
+        return this.availableStock != null && this.availableStock >= quantity;
+    }
+
+    public void reserveStock(int quantity) {
+        if (!hasSufficientStock(quantity)) {
+            throw new IllegalStateException("Insufficient stock to reserve");
+        }
+        this.availableStock -= quantity;
+        this.reservedStock += quantity;
+    }
+
+    public void releaseReservedStock(int quantity) {
+        this.reservedStock = Math.max(0, this.reservedStock - quantity);
+        this.availableStock += quantity;
+    }
+
+    public void confirmDeduction(int quantity) {
+        this.reservedStock = Math.max(0, this.reservedStock - quantity);
+        this.totalStock = Math.max(0, this.totalStock - quantity);
     }
 }

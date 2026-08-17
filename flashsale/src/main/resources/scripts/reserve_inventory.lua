@@ -1,30 +1,42 @@
--- KEYS[1]: inventory:{item_id}
--- KEYS[2]: reservation:{user_id}:{item_id}
+-- KEYS[1]: inventory:{productId}
+-- KEYS[2]: reservation:user:{userId}:{productId}
+-- KEYS[3]: flashsale:reservation:{reservationId}
 -- ARGV[1]: requested_quantity
 -- ARGV[2]: ttl_seconds
--- ARGV[3]: reservation_id
+-- ARGV[3]: user_id
+-- ARGV[4]: product_id
 
-local current_stock = redis.call('GET', KEYS[1])
+local inventoryKey = KEYS[1]
+local userHoldKey = KEYS[2]
+local resLookupKey = KEYS[3]
 
-if not current_stock then
-    return -1
+local requestedQty = tonumber(ARGV[1]) or 1
+local ttl = tonumber(ARGV[2]) or 600
+local userId = ARGV[3]
+local productId = ARGV[4]
+
+local currentStock = redis.call('GET', inventoryKey)
+
+if not currentStock then
+    return -1 -- Cache not warm
 end
 
-if tonumber(current_stock) < tonumber(ARGV[1]) then
-    return 0
+if tonumber(currentStock) < requestedQty then
+    return 0 -- Insufficient stock
 end
 
-local existing_hold = redis.call('EXISTS', KEYS[2])
-if existing_hold == 1 then
-    return -2
+if redis.call('EXISTS', userHoldKey) == 1 then
+    return -2 -- Duplicate reservation by user
 end
 
-redis.call('DECRBY', KEYS[1], ARGV[1])
+-- Deduct stock
+redis.call('DECRBY', inventoryKey, requestedQty)
 
-local hold_payload = cjson.encode({
-    reservationId = ARGV[3],
-    quantity = ARGV[1]
-})
-redis.call('SETEX', KEYS[2], tonumber(ARGV[2]), hold_payload)
+-- Store user lock
+redis.call('SETEX', userHoldKey, ttl, "LOCKED")
 
-return 1
+-- Store lookup key for checkout validation: "userId:productId:quantity"
+local payload = string.format("%s:%s:%d", userId, productId, requestedQty)
+redis.call('SETEX', resLookupKey, ttl, payload)
+
+return 1 -- Success

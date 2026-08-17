@@ -68,3 +68,17 @@ management:
     web:
       exposure:
         include: health,metrics,prometheus,info
+
+resilience4j:
+  circuitbreaker:
+  instances:
+    paymentService:
+      registerHealthIndicator: true
+      slidingWindowType: COUNT_BASED
+      slidingWindowSize: 10
+      failureRateThreshold: 50
+      slowCallRateThreshold: 50
+      slowCallDurationThreshold: 2s
+      waitDurationInOpenState: 10s
+      permittedNumberOfCallsInHalfOpenState: 3
+      automaticTransitionFromOpenToHalfOpenEnabled: true

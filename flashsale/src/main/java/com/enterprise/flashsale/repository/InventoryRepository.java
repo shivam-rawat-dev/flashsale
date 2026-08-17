@@ -15,12 +15,10 @@ public interface InventoryRepository extends JpaRepository<Inventory, Long> {
     Optional<Inventory> findByProductId(Long productId);
 
     /**
-     * Atomically reserve stock during checkout.
-     * Prevents overselling by enforcing (availableStock >= quantity) in the WHERE clause.
-     *
-     * @return 1 if successful, 0 if insufficient stock or product not found
+     * Atomically reserve stock in DB. Enforces availableStock >= quantity.
+     * @return Number of rows updated (1 if successful, 0 if insufficient stock)
      */
-    @Modifying(clearAutomatically = true)
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("UPDATE Inventory i " +
             "SET i.availableStock = i.availableStock - :quantity, " +
             "    i.reservedStock = i.reservedStock + :quantity, " +
@@ -30,10 +28,9 @@ public interface InventoryRepository extends JpaRepository<Inventory, Long> {
     int reserveStock(@Param("productId") Long productId, @Param("quantity") Integer quantity);
 
     /**
-     * Confirms the purchase after successful payment.
-     * Deducts from reserved stock and total stock.
+     * Confirms purchase after successful payment. Deducts reserved & total stock.
      */
-    @Modifying(clearAutomatically = true)
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("UPDATE Inventory i " +
             "SET i.reservedStock = i.reservedStock - :quantity, " +
             "    i.totalStock = i.totalStock - :quantity, " +
@@ -43,9 +40,9 @@ public interface InventoryRepository extends JpaRepository<Inventory, Long> {
     int confirmDeduction(@Param("productId") Long productId, @Param("quantity") Integer quantity);
 
     /**
-     * Releases reserved stock back to available stock (e.g., payment failure, order timeout).
+     * Compensating action: releases reserved stock back to available stock.
      */
-    @Modifying(clearAutomatically = true)
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("UPDATE Inventory i " +
             "SET i.availableStock = i.availableStock + :quantity, " +
             "    i.reservedStock = i.reservedStock - :quantity, " +

@@ -134,3 +134,31 @@ services:
       - elasticsearch
     networks:
       - flashsale-network
+
+
+  app:
+    build: .
+    container_name: flashsale-backend
+    ports:
+      - "8080:8080"
+    environment:
+      - RDS_DB_URL=your_aws_url
+      - RDS_DB_USERNAME=postgres
+      - RDS_DB_PASSWORD=your_password
+      - REDIS_HOST=flashsale-redis
+      - REDIS_PORT=6379
+      - SPRING_DATA_REDIS_PASSWORD=redispassword
+      - RABBITMQ_HOST=flashsale-rabbitmq
+      - RABBITMQ_PORT=5672
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - AWS_ACCESS_KEY_ID=your_access_key_here
+      - AWS_SECRET_ACCESS_KEY=your_secret_key_here
+      - AWS_REGION=your_region
+    depends_on:
+      - postgres
+      - redis
+      - rabbitmq
+      - kafka
+    networks:
+      - flashsale-network
+

@@ -4,9 +4,9 @@ spring:
 
   # PostgreSQL Data Source
   datasource:
-    url: jdbc:postgresql://localhost:5432/flashsale_db
-    username: postgres
-    password: postgrespassword
+    url: ${RDS_DB_URL}
+    username: ${RDS_DB_USERNAME}
+    password: ${RDS_DB_PASSWORD}
     driver-class-name: org.postgresql.Driver
 
   jpa:
@@ -17,39 +17,24 @@ spring:
       hibernate:
         format_sql: true
 
-  # Legacy Spring Boot 2.x Redis path
-  redis:
-    host: localhost
-    port: 6379
-    password: redispassword
-    timeout: 3000ms
-
-  # Spring Boot 3.x Redis path
+  # Spring Boot Redis Configuration
   data:
     redis:
-      host: localhost
-      port: 6379
-      password: redispassword
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
       timeout: 3000ms
 
-  # RabbitMQ Configuration
+  # RabbitMQ Configuration (Spring Boot standard properties)
   rabbitmq:
-    build:
-      context: .
-      dockerfile: Dockerfile.rabbitmq
-    container_name: flashsale-rabbitmq
-    environment:
-      RABBITMQ_DEFAULT_USER: guest
-      RABBITMQ_DEFAULT_PASS: guest
-    ports:
-      - "5672:5672"    # AMQP Protocol Port
-      - "15672:15672"  # Management Web UI
-    networks:
-      - flashsale-network
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USER:guest}
+    password: ${RABBITMQ_PASSWORD:guest}
 
   # Apache Kafka Configuration
   kafka:
-    bootstrap-servers: 127.0.0.1:9092
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:127.0.0.1:9092}
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.apache.kafka.common.serialization.StringSerializer
@@ -71,14 +56,22 @@ management:
 
 resilience4j:
   circuitbreaker:
-  instances:
-    paymentService:
-      registerHealthIndicator: true
-      slidingWindowType: COUNT_BASED
-      slidingWindowSize: 10
-      failureRateThreshold: 50
-      slowCallRateThreshold: 50
-      slowCallDurationThreshold: 2s
-      waitDurationInOpenState: 10s
-      permittedNumberOfCallsInHalfOpenState: 3
-      automaticTransitionFromOpenToHalfOpenEnabled: true
+    instances:
+      paymentService:
+        registerHealthIndicator: true
+        slidingWindowType: COUNT_BASED
+        slidingWindowSize: 10
+        failureRateThreshold: 50
+        slowCallRateThreshold: 50
+        slowCallDurationThreshold: 2s
+        waitDurationInOpenState: 10s
+        permittedNumberOfCallsInHalfOpenState: 3
+        automaticTransitionFromOpenToHalfOpenEnabled: true
+
+cloud:
+  aws:
+    credentials:
+      access-key: ${AWS_ACCESS_KEY_ID}
+      secret-key: ${AWS_SECRET_ACCESS_KEY}
+    region:
+      static: ${AWS_REGION:us-east-1}

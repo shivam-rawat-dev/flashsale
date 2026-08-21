@@ -9,7 +9,11 @@ import org.springframework.stereotype.Component;
 @Component
 public class OrderEventListener {
 
-    @KafkaListener(topics = KafkaConfig.ORDER_FINALIZED_TOPIC, groupId = "flashsale-group")
+    @KafkaListener(
+            topics = KafkaConfig.ORDER_FINALIZED_TOPIC,
+            groupId = "flashsale-group",
+            containerFactory = "kafkaListenerContainerFactory"
+    )
     public void handleOrderFinalized(Object payload) {
         log.info("RECEIVED KAFKA EVENT -> Order Payload: {}", payload);
     }

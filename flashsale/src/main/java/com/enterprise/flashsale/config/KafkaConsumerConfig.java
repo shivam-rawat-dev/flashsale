@@ -29,15 +29,13 @@ import java.util.Map;
 @Configuration
 public class KafkaConsumerConfig {
 
-    @Value("${spring.kafka.bootstrap-servers:localhost:9092}")
+    @Value("${KAFKA_BOOTSTRAP_SERVERS:${spring.kafka.bootstrap-servers:kafka:9092}}")
     private String bootstrapServers;
 
     @Value("${spring.kafka.consumer.group-id:flashsale-order-group}")
     private String groupId;
 
-    // ------------------------------------------------------------------------
-    // 1. Producer Factory & KafkaTemplate (Required for DLT Publishing)
-    // ------------------------------------------------------------------------
+
     @Bean
     public ProducerFactory<String, Object> dltProducerFactory() {
         Map<String, Object> props = new HashMap<>();

@@ -1,0 +1,52 @@
+{
+  "family": "flashsale-task",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": [
+    "FARGATE"
+  ],
+  "cpu": "512",
+  "memory": "1024",
+  "executionRoleArn": "arn:aws:iam::377131740118:role/ecsTaskExecutionRole",
+  "containerDefinitions": [
+    {
+      "name": "flashsale-backend",
+      "image": "377131740118.dkr.ecr.us-east-1.amazonaws.com/flashsale-backend:latest",
+      "portMappings": [
+        {
+          "containerPort": 8080,
+          "hostPort": 8080,
+          "protocol": "tcp"
+        }
+      ],
+      "essential": true,
+      "environment": [
+        { "name": "RDS_DB_URL", "value": "jdbc:postgresql://flashsale-db.cpcuoc6y49dh.eu-north-1.rds.amazonaws.com:5432/flashsale_db" },
+        { "name": "RDS_DB_USERNAME", "value": "postgres" },
+        { "name": "SPRING_DATA_REDIS_HOST", "value": "your-redis-endpoint.cache.amazonaws.com" },
+        { "name": "SPRING_DATA_REDIS_PORT", "value": "6379" },
+        { "name": "RABBITMQ_HOST", "value": "your-rabbitmq-endpoint" },
+        { "name": "RABBITMQ_PORT", "value": "5672" },
+        { "name": "AWS_REGION", "value": "us-east-1" }
+      ],
+      "secrets": [
+        {
+          "name": "RDS_DB_PASSWORD",
+          "valueFrom": "arn:aws:secretsmanager:us-east-1:377131740118:secret:flashsale/db-password:password::"
+        },
+        {
+          "name": "SPRING_DATA_REDIS_PASSWORD",
+          "valueFrom": "arn:aws:secretsmanager:us-east-1:377131740118:secret:flashsale/redis-password:password::"
+        }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/flashsale-task",
+          "awslogs-region": "us-east-1",
+          "awslogs-create-group": "true",
+          "awslogs-stream-prefix": "backend"
+        }
+      }
+    }
+  ]
+}

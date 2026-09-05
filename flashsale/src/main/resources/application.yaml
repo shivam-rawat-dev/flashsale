@@ -48,6 +48,16 @@ spring:
     admin:
       fail-fast: false
 
+# OpenAPI / Swagger UI Config
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operations-sorter: method
+    tags-sorter: alpha
+    try-it-out-enabled: true
+
 # Actuator Health Config
 management:
   endpoint:

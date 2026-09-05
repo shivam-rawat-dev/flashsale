@@ -135,25 +135,24 @@ services:
     networks:
       - flashsale-network
 
-
   app:
     build: .
     container_name: flashsale-backend
     ports:
       - "8080:8080"
     environment:
-      - RDS_DB_URL=jdbc:localhost:5432/postgres
-      - RDS_DB_USERNAME=postgres
-      - RDS_DB_PASSWORD=your_password
-      - REDIS_HOST=flashsale-redis
-      - REDIS_PORT=6379
-      - SPRING_DATA_REDIS_PASSWORD=your_password
-      - RABBITMQ_HOST=flashsale-rabbitmq
-      - RABBITMQ_PORT=5672
-      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
-      - AWS_ACCESS_KEY_ID=your_secret_key
-      - AWS_SECRET_ACCESS_KEY=your_access_key
-      - AWS_REGION=your_region
+      - RDS_DB_URL=${RDS_DB_URL:-jdbc:postgresql://postgres:5432/flashsale_db}
+      - RDS_DB_USERNAME=${RDS_DB_USERNAME:-postgres}
+      - RDS_DB_PASSWORD=${RDS_DB_PASSWORD:-postgrespassword}
+      - REDIS_HOST=${REDIS_HOST:-redis}
+      - REDIS_PORT=${REDIS_PORT:-6379}
+      - SPRING_DATA_REDIS_PASSWORD=${REDIS_PASSWORD:-redispassword}
+      - RABBITMQ_HOST=${RABBITMQ_HOST:-rabbitmq}
+      - RABBITMQ_PORT=${RABBITMQ_PORT:-5672}
+      - KAFKA_BOOTSTRAP_SERVERS=${KAFKA_BOOTSTRAP_SERVERS:-kafka:9092}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-}
+      - AWS_REGION=${AWS_REGION:-us-east-1}
     depends_on:
       - postgres
       - redis
@@ -161,4 +160,3 @@ services:
       - kafka
     networks:
       - flashsale-network
-

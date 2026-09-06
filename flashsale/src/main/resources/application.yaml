@@ -4,9 +4,9 @@ spring:
 
   # PostgreSQL Data Source
   datasource:
-    url: ${RDS_DB_URL}
-    username: ${RDS_DB_USERNAME}
-    password: ${RDS_DB_PASSWORD}
+    url: ${RDS_DB_URL:jdbc:postgresql://localhost:5432/flashsale_db}
+    username: ${RDS_DB_USERNAME:postgres}
+    password: ${RDS_DB_PASSWORD:postgrespassword}
     driver-class-name: org.postgresql.Driver
 
   jpa:
@@ -85,7 +85,7 @@ resilience4j:
 cloud:
   aws:
     credentials:
-      access-key: ${AWS_ACCESS_KEY_ID}
-      secret-key: ${AWS_SECRET_ACCESS_KEY}
+      access-key: ${AWS_ACCESS_KEY_ID:dummy-access-key}
+      secret-key: ${AWS_SECRET_ACCESS_KEY:dummy-secret-key}
     region:
       static: ${AWS_REGION:ap-south-1}

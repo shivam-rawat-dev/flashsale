@@ -6,6 +6,7 @@ import io.github.bucket4j.redis.lettuce.Bucket4jLettuce;
 import io.lettuce.core.RedisClient;
 import io.lettuce.core.api.StatefulRedisConnection;
 import io.lettuce.core.codec.ByteArrayCodec;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -15,6 +16,7 @@ import java.time.Duration;
 public class RateLimitConfig {
 
     @Bean(destroyMethod = "close")
+    @ConditionalOnMissingBean
     public StatefulRedisConnection<byte[], byte[]> bucket4jRedisConnection(
             RedisClient redisClient
     ) {
@@ -22,6 +24,7 @@ public class RateLimitConfig {
     }
 
     @Bean
+    @ConditionalOnMissingBean
     public ProxyManager<byte[]> proxyManager(
             StatefulRedisConnection<byte[], byte[]> bucket4jRedisConnection
     ) {

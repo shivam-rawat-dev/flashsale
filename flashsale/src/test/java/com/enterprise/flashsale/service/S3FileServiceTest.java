@@ -2,9 +2,10 @@ package com.enterprise.flashsale.service;
 
 import io.awspring.cloud.s3.S3Template;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.io.ByteArrayInputStream;
 
@@ -12,13 +13,13 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 
-@SpringBootTest
+@ExtendWith(MockitoExtension.class)
 class S3FileServiceTest {
 
-    @Autowired
+    @InjectMocks
     private S3FileService s3FileService;
 
-    @MockBean
+    @Mock
     private S3Template s3Template; // Mocking S3 to avoid actual AWS costs/calls during build
 
     @Test

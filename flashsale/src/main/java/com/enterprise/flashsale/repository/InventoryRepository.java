@@ -22,7 +22,7 @@ public interface InventoryRepository extends JpaRepository<Inventory, Long> {
     @Query("UPDATE Inventory i " +
             "SET i.availableStock = i.availableStock - :quantity, " +
             "    i.reservedStock = i.reservedStock + :quantity, " +
-            "    i.updatedAt = CURRENT_TIMESTAMP " +
+            "    i.updatedAt = CURRENT_INSTANT " +
             "WHERE i.productId = :productId " +
             "  AND i.availableStock >= :quantity")
     int reserveStock(@Param("productId") Long productId, @Param("quantity") Integer quantity);
@@ -34,7 +34,7 @@ public interface InventoryRepository extends JpaRepository<Inventory, Long> {
     @Query("UPDATE Inventory i " +
             "SET i.reservedStock = i.reservedStock - :quantity, " +
             "    i.totalStock = i.totalStock - :quantity, " +
-            "    i.updatedAt = CURRENT_TIMESTAMP " +
+            "    i.updatedAt = CURRENT_INSTANT " +
             "WHERE i.productId = :productId " +
             "  AND i.reservedStock >= :quantity")
     int confirmDeduction(@Param("productId") Long productId, @Param("quantity") Integer quantity);
@@ -46,7 +46,7 @@ public interface InventoryRepository extends JpaRepository<Inventory, Long> {
     @Query("UPDATE Inventory i " +
             "SET i.availableStock = i.availableStock + :quantity, " +
             "    i.reservedStock = i.reservedStock - :quantity, " +
-            "    i.updatedAt = CURRENT_TIMESTAMP " +
+            "    i.updatedAt = CURRENT_INSTANT " +
             "WHERE i.productId = :productId " +
             "  AND i.reservedStock >= :quantity")
     int releaseReservedStock(@Param("productId") Long productId, @Param("quantity") Integer quantity);

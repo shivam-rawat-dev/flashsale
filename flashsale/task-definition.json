@@ -4,13 +4,14 @@
   "requiresCompatibilities": [
     "FARGATE"
   ],
-  "cpu": "512",
-  "memory": "1024",
+  "cpu": "2048",
+  "memory": "4096",
   "executionRoleArn": "arn:aws:iam::377131740118:role/ecsTaskExecutionRole",
   "containerDefinitions": [
     {
       "name": "flashsale-backend",
-      "image": "377131740118.dkr.ecr.us-east-1.amazonaws.com/flashsale-backend:latest",
+      "image": "377131740118.dkr.ecr.ap-south-1.amazonaws.com/flashsale-backend:latest",
+      "essential": true,
       "portMappings": [
         {
           "containerPort": 8080,
@@ -18,33 +19,143 @@
           "protocol": "tcp"
         }
       ],
-      "essential": true,
+      "dependsOn": [
+        {
+          "containerName": "redis",
+          "condition": "START"
+        },
+        {
+          "containerName": "rabbitmq",
+          "condition": "START"
+        },
+        {
+          "containerName": "kafka",
+          "condition": "START"
+        }
+      ],
       "environment": [
-        { "name": "RDS_DB_URL", "value": "jdbc:postgresql://flashsale-db.cpcuoc6y49dh.eu-north-1.rds.amazonaws.com:5432/flashsale_db" },
+        { "name": "RDS_DB_URL", "value": "jdbc:postgresql://flashsale-db.ct4miysm8115.ap-south-1.rds.amazonaws.com:5432/flashsale_db" },
         { "name": "RDS_DB_USERNAME", "value": "postgres" },
-        { "name": "SPRING_DATA_REDIS_HOST", "value": "your-redis-endpoint.cache.amazonaws.com" },
+        { "name": "SPRING_DATA_REDIS_HOST", "value": "localhost" },
         { "name": "SPRING_DATA_REDIS_PORT", "value": "6379" },
-        { "name": "RABBITMQ_HOST", "value": "your-rabbitmq-endpoint" },
+        { "name": "RABBITMQ_HOST", "value": "localhost" },
         { "name": "RABBITMQ_PORT", "value": "5672" },
-        { "name": "AWS_REGION", "value": "us-east-1" }
+        { "name": "KAFKA_BOOTSTRAP_SERVERS", "value": "localhost:9092" },
+        { "name": "AWS_REGION", "value": "ap-south-1" }
       ],
       "secrets": [
         {
           "name": "RDS_DB_PASSWORD",
-          "valueFrom": "arn:aws:secretsmanager:us-east-1:377131740118:secret:flashsale/db-password:password::"
+          "valueFrom": "arn:aws:secretsmanager:ap-south-1:377131740118:secret:flashsale/db-password:password::"
         },
         {
           "name": "SPRING_DATA_REDIS_PASSWORD",
-          "valueFrom": "arn:aws:secretsmanager:us-east-1:377131740118:secret:flashsale/redis-password:password::"
+          "valueFrom": "arn:aws:secretsmanager:ap-south-1:377131740118:secret:flashsale/redis-password:password::"
         }
       ],
       "logConfiguration": {
         "logDriver": "awslogs",
         "options": {
           "awslogs-group": "/ecs/flashsale-task",
-          "awslogs-region": "us-east-1",
+          "awslogs-region": "ap-south-1",
           "awslogs-create-group": "true",
           "awslogs-stream-prefix": "backend"
+        }
+      }
+    },
+    {
+      "name": "redis",
+      "image": "redis:7-alpine",
+      "essential": true,
+      "command": [
+        "redis-server",
+        "--appendonly",
+        "yes",
+        "--requirepass",
+        "redispassword"
+      ],
+      "portMappings": [
+        {
+          "containerPort": 6379,
+          "hostPort": 6379,
+          "protocol": "tcp"
+        }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/flashsale-task",
+          "awslogs-region": "ap-south-1",
+          "awslogs-create-group": "true",
+          "awslogs-stream-prefix": "redis"
+        }
+      }
+    },
+    {
+      "name": "rabbitmq",
+      "image": "rabbitmq:3-management",
+      "essential": true,
+      "environment": [
+        { "name": "RABBITMQ_DEFAULT_USER", "value": "guest" },
+        { "name": "RABBITMQ_DEFAULT_PASS", "value": "guest" }
+      ],
+      "portMappings": [
+        {
+          "containerPort": 5672,
+          "hostPort": 5672,
+          "protocol": "tcp"
+        },
+        {
+          "containerPort": 15672,
+          "hostPort": 15672,
+          "protocol": "tcp"
+        }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/flashsale-task",
+          "awslogs-region": "ap-south-1",
+          "awslogs-create-group": "true",
+          "awslogs-stream-prefix": "rabbitmq"
+        }
+      }
+    },
+    {
+      "name": "kafka",
+      "image": "confluentinc/cp-kafka:7.5.0",
+      "essential": true,
+      "environment": [
+        { "name": "KAFKA_NODE_ID", "value": "1" },
+        { "name": "KAFKA_LISTENER_SECURITY_PROTOCOL_MAP", "value": "CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT" },
+        { "name": "KAFKA_LISTENERS", "value": "PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093" },
+        { "name": "KAFKA_ADVERTISED_LISTENERS", "value": "PLAINTEXT://localhost:9092" },
+        { "name": "KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR", "value": "1" },
+        { "name": "KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS", "value": "0" },
+        { "name": "KAFKA_TRANSACTION_STATE_LOG_MIN_ISR", "value": "1" },
+        { "name": "KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR", "value": "1" },
+        { "name": "KAFKA_PROCESS_ROLES", "value": "broker,controller" },
+        { "name": "KAFKA_CONTROLLER_QUORUM_VOTERS", "value": "1@localhost:9093" },
+        { "name": "KAFKA_INTER_BROKER_LISTENER_NAME", "value": "PLAINTEXT" },
+        { "name": "KAFKA_CONTROLLER_LISTENER_NAMES", "value": "CONTROLLER" },
+        { "name": "KAFKA_LOG_DIRS", "value": "/tmp/kraft-combined-logs" },
+        { "name": "CLUSTER_ID", "value": "MkU3OEVBNTcwNTJENDM2Qk" },
+        { "name": "KAFKA_JVM_PERFORMANCE_OPTS", "value": "-Xms256m -Xmx512m" }
+      ],
+      "portMappings": [
+        {
+          "containerPort": 9092,
+          "hostPort": 9092,
+          "protocol": "tcp"
+        }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/flashsale-task",
+          "awslogs-region": "ap-south-1",
+          "awslogs-create-group": "true",
+          "awslogs-stream-prefix": "kafka"
         }
       }
     }

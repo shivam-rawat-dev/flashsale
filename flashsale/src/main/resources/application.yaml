@@ -22,7 +22,7 @@ spring:
     redis:
       host: ${REDIS_HOST:localhost}
       port: ${REDIS_PORT:6379}
-      password: ${REDIS_PASSWORD:}
+      password: ${REDIS_PASSWORD:${SPRING_DATA_REDIS_PASSWORD:}}
       timeout: 3000ms
 
   # RabbitMQ Configuration (Spring Boot standard properties)
@@ -88,4 +88,4 @@ cloud:
       access-key: ${AWS_ACCESS_KEY_ID}
       secret-key: ${AWS_SECRET_ACCESS_KEY}
     region:
-      static: ${AWS_REGION:us-east-1}
+      static: ${AWS_REGION:ap-south-1}

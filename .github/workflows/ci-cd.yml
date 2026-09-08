@@ -95,13 +95,6 @@ jobs:
       - name: Checkout Source Code
         uses: actions/checkout@v4
 
-      - name: Debug OIDC Token Claims (Diagnostic)
-        run: |
-          echo "Repository: ${{ github.repository }}"
-          echo "Ref: ${{ github.ref }}"
-          echo "Actor: ${{ github.actor }}"
-          echo "Expected sub claim: repo:${{ github.repository }}:ref:${{ github.ref }}"
-
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -111,6 +104,7 @@ jobs:
           role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
           role-session-name: GHA-FlashSale-${{ github.run_id }}
           aws-region: ${{ env.AWS_REGION }}
+          disable-session-tags: true
 
       - name: Log in to Amazon ECR
         id: login-ecr

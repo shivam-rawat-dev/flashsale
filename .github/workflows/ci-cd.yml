@@ -101,10 +101,11 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
           role-session-name: GHA-FlashSale-${{ github.run_id }}
           aws-region: ${{ env.AWS_REGION }}
-          audience: sts.amazonaws.com
           role-skip-session-tagging: true
 
       - name: Log in to Amazon ECR

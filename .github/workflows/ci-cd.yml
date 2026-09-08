@@ -104,7 +104,8 @@ jobs:
           role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
           role-session-name: GHA-FlashSale-${{ github.run_id }}
           aws-region: ${{ env.AWS_REGION }}
-          disable-session-tags: true
+          audience: sts.amazonaws.com
+          role-skip-session-tagging: true
 
       - name: Log in to Amazon ECR
         id: login-ecr

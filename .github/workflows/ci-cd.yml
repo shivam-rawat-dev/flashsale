@@ -34,7 +34,6 @@ env:
 permissions:
   id-token: write   # Required for AWS OIDC authentication
   contents: read    # Required for actions/checkout
-  checks: write      # Required for test report reporting
 
 jobs:
   # =========================================================================
@@ -99,13 +98,11 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Configure AWS Credentials (OIDC Role or Secret Keys)
+      - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME || secrets.aws_role_to_assume }}
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
           role-session-name: GHA-FlashSale-${{ github.run_id }}
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID || secrets.aws_access_key_id }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY || secrets.aws_secret_access_key }}
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Log in to Amazon ECR

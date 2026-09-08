@@ -58,7 +58,7 @@
         "options": {
           "awslogs-group": "/ecs/flashsale-task",
           "awslogs-region": "ap-south-1",
-          "awslogs-create-group": "true",
+          "awslogs-create-group": "false",
           "awslogs-stream-prefix": "backend"
         }
       }
@@ -68,11 +68,15 @@
       "image": "redis:7-alpine",
       "essential": true,
       "command": [
-        "redis-server",
-        "--appendonly",
-        "yes",
-        "--requirepass",
-        "redispassword"
+        "sh",
+        "-c",
+        "redis-server --appendonly yes --requirepass \"$REDIS_PASSWORD\""
+      ],
+      "secrets": [
+        {
+          "name": "REDIS_PASSWORD",
+          "valueFrom": "arn:aws:secretsmanager:ap-south-1:377131740118:secret:flashsale/redis-password:password::"
+        }
       ],
       "portMappings": [
         {
@@ -86,7 +90,7 @@
         "options": {
           "awslogs-group": "/ecs/flashsale-task",
           "awslogs-region": "ap-south-1",
-          "awslogs-create-group": "true",
+          "awslogs-create-group": "false",
           "awslogs-stream-prefix": "redis"
         }
       }
@@ -116,7 +120,7 @@
         "options": {
           "awslogs-group": "/ecs/flashsale-task",
           "awslogs-region": "ap-south-1",
-          "awslogs-create-group": "true",
+          "awslogs-create-group": "false",
           "awslogs-stream-prefix": "rabbitmq"
         }
       }
@@ -154,7 +158,7 @@
         "options": {
           "awslogs-group": "/ecs/flashsale-task",
           "awslogs-region": "ap-south-1",
-          "awslogs-create-group": "true",
+          "awslogs-create-group": "false",
           "awslogs-stream-prefix": "kafka"
         }
       }

@@ -98,15 +98,13 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Configure AWS Credentials
+      - name: Configure AWS Credentials (OIDC Only)
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
           role-session-name: GHA-FlashSale-${{ github.run_id }}
           aws-region: ${{ env.AWS_REGION }}
-          role-skip-session-tagging: true
+          audience: sts.amazonaws.com
 
       - name: Log in to Amazon ECR
         id: login-ecr

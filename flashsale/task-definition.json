@@ -46,7 +46,7 @@
       "secrets": [
         {
           "name": "RDS_DB_PASSWORD",
-          "valueFrom": "arn:aws:ssm:ap-south-1:377131740118:parameter/flashsale/rds/password"
+          "valueFrom": "/flashsale/rds/password"
         }
       ],
       "logConfiguration": {

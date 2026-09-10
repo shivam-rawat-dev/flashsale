@@ -31,13 +31,10 @@ env:
   CONTAINER_NAME: flashsale-backend
 
 permissions:
-  id-token: write   # Required for AWS OIDC authentication
-  contents: read    # Required for actions/checkout
+  id-token: write
+  contents: read
 
 jobs:
-  # =========================================================================
-  # 1. Continuous Integration: Lint, Unit & Integration Tests, Artifact Build
-  # =========================================================================
   ci-build-and-test:
     name: Build & Test Application
     runs-on: ubuntu-latest
@@ -81,9 +78,6 @@ jobs:
           path: flashsale/target/*.jar
           retention-days: 7
 
-  # =========================================================================
-  # 2. Continuous Delivery: Build Container, Push to AWS ECR, Deploy to ECS
-  # =========================================================================
   cd-deploy-to-aws:
     name: Build Image & Deploy to AWS ECS
     runs-on: ubuntu-latest
@@ -93,6 +87,22 @@ jobs:
     steps:
       - name: Checkout Source Code
         uses: actions/checkout@v4
+
+      - name: Debug STS Response with Full HTTP Trace
+        run: |
+          TOKEN=$(curl -s -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=sts.amazonaws.com" | jq -r '.value')
+          ROLE_ARN="${{ secrets.AWS_ROLE_TO_ASSUME }}"
+          
+          echo "Target Role ARN: $ROLE_ARN"
+          echo "Calling STS with --debug..."
+          aws sts assume-role-with-web-identity \
+            --role-arn "$ROLE_ARN" \
+            --role-session-name "GHA-Debug" \
+            --web-identity-token "$TOKEN" \
+            --duration-seconds 900 \
+            --region ${{ env.AWS_REGION }} \
+            --debug 2>&1 | grep -E "(HTTP/|Response body:|<Message>|<Code>|Error:)" || true
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3

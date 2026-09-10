@@ -26,7 +26,7 @@ env:
   AWS_REGION: ${{ vars.AWS_REGION || vars.aws_region || secrets.AWS_REGION || secrets.aws_region || 'ap-south-1' }}
   ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY || vars.ecr_repository || secrets.ECR_REPOSITORY || 'flashsale-backend' }}
   ECS_CLUSTER: ${{ vars.ECS_CLUSTER || vars.ecs_cluster || secrets.ECS_CLUSTER || 'flashsale-cluster' }}
-  ECS_SERVICE: ${{ vars.ECS_SERVICE || vars.ecs_service || secrets.ECS_SERVICE || 'flashsale-service' }}
+  ECS_SERVICE: ${{ vars.ECS_SERVICE || vars.ecs_service || secrets.ECS_SERVICE || 'flashsale-task-service' }}
   ECS_TASK_DEFINITION: flashsale/task-definition.json
   CONTAINER_NAME: flashsale-backend
 

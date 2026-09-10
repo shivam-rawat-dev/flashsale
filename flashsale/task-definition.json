@@ -58,7 +58,6 @@
         "options": {
           "awslogs-group": "/ecs/flashsale-task",
           "awslogs-region": "ap-south-1",
-          "awslogs-create-group": "false",
           "awslogs-stream-prefix": "backend"
         }
       }
@@ -90,7 +89,6 @@
         "options": {
           "awslogs-group": "/ecs/flashsale-task",
           "awslogs-region": "ap-south-1",
-          "awslogs-create-group": "false",
           "awslogs-stream-prefix": "redis"
         }
       }
@@ -120,7 +118,6 @@
         "options": {
           "awslogs-group": "/ecs/flashsale-task",
           "awslogs-region": "ap-south-1",
-          "awslogs-create-group": "false",
           "awslogs-stream-prefix": "rabbitmq"
         }
       }
@@ -158,7 +155,6 @@
         "options": {
           "awslogs-group": "/ecs/flashsale-task",
           "awslogs-region": "ap-south-1",
-          "awslogs-create-group": "false",
           "awslogs-stream-prefix": "kafka"
         }
       }

@@ -35,9 +35,6 @@ permissions:
   contents: read
 
 jobs:
-  # =========================================================================
-  # 1. Continuous Integration: Lint, Unit & Integration Tests, Artifact Build
-  # =========================================================================
   ci-build-and-test:
     name: Build & Test Application
     runs-on: ubuntu-latest
@@ -81,9 +78,6 @@ jobs:
           path: flashsale/target/*.jar
           retention-days: 7
 
-  # =========================================================================
-  # 2. Continuous Delivery: Build Container, Push to AWS ECR, Deploy to ECS
-  # =========================================================================
   cd-deploy-to-aws:
     name: Build Image & Deploy to AWS ECS
     runs-on: ubuntu-latest
@@ -104,6 +98,16 @@ jobs:
           role-session-name: GHA-FlashSale-${{ github.run_id }}
           aws-region: ${{ env.AWS_REGION }}
           audience: sts.amazonaws.com
+
+      - name: Inspect Available ECS Clusters & Services (Diagnostic)
+        run: |
+          echo "Configured AWS_REGION: ${{ env.AWS_REGION }}"
+          echo "Configured ECS_CLUSTER: ${{ env.ECS_CLUSTER }}"
+          echo "Configured ECS_SERVICE: ${{ env.ECS_SERVICE }}"
+          echo "=== List of ECS Clusters in ${{ env.AWS_REGION }} ==="
+          aws ecs list-clusters --region ${{ env.AWS_REGION }}
+          echo "=== List of Services in cluster '${{ env.ECS_CLUSTER }}' ==="
+          aws ecs list-services --cluster ${{ env.ECS_CLUSTER }} --region ${{ env.AWS_REGION }} || true
 
       - name: Log in to Amazon ECR
         id: login-ecr

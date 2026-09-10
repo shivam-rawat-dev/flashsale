@@ -36,18 +36,13 @@
       "environment": [
         { "name": "RDS_DB_URL", "value": "jdbc:postgresql://flashsale-db.ct4miysm8115.ap-south-1.rds.amazonaws.com:5432/flashsale_db" },
         { "name": "RDS_DB_USERNAME", "value": "postgres" },
+        { "name": "RDS_DB_PASSWORD", "value": "System123#" },
         { "name": "SPRING_DATA_REDIS_HOST", "value": "127.0.0.1" },
         { "name": "SPRING_DATA_REDIS_PORT", "value": "6379" },
         { "name": "RABBITMQ_HOST", "value": "127.0.0.1" },
         { "name": "RABBITMQ_PORT", "value": "5672" },
         { "name": "KAFKA_BOOTSTRAP_SERVERS", "value": "127.0.0.1:9092" },
         { "name": "AWS_REGION", "value": "ap-south-1" }
-      ],
-      "secrets": [
-        {
-          "name": "RDS_DB_PASSWORD",
-          "valueFrom": "/flashsale/rds/password"
-        }
       ],
       "logConfiguration": {
         "logDriver": "awslogs",

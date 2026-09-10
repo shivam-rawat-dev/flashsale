@@ -43,6 +43,12 @@
         { "name": "KAFKA_BOOTSTRAP_SERVERS", "value": "127.0.0.1:9092" },
         { "name": "AWS_REGION", "value": "ap-south-1" }
       ],
+      "secrets": [
+        {
+          "name": "RDS_DB_PASSWORD",
+          "valueFrom": "arn:aws:ssm:ap-south-1:377131740118:parameter/flashsale/rds/password"
+        }
+      ],
       "logConfiguration": {
         "logDriver": "awslogs",
         "options": {

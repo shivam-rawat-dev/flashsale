@@ -23,10 +23,10 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
-  AWS_REGION: ${{ vars.AWS_REGION || vars.aws_region || secrets.AWS_REGION || secrets.aws_region || 'ap-south-1' }}
-  ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY || vars.ecr_repository || secrets.ECR_REPOSITORY || 'flashsale-backend' }}
-  ECS_CLUSTER: ${{ vars.ECS_CLUSTER || vars.ecs_cluster || secrets.ECS_CLUSTER || 'flashsale-cluster' }}
-  ECS_SERVICE: ${{ vars.ECS_SERVICE || vars.ecs_service || secrets.ECS_SERVICE || 'flashsale-task-service' }}
+  AWS_REGION: ap-south-1
+  ECR_REPOSITORY: flashsale-backend
+  ECS_CLUSTER: flashsale-cluster
+  ECS_SERVICE: flashsale-task-service
   ECS_TASK_DEFINITION: flashsale/task-definition.json
   CONTAINER_NAME: flashsale-backend
 
@@ -96,18 +96,8 @@ jobs:
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
           role-session-name: GHA-FlashSale-${{ github.run_id }}
-          aws-region: ${{ env.AWS_REGION }}
+          aws-region: ap-south-1
           audience: sts.amazonaws.com
-
-      - name: Inspect Available ECS Clusters & Services (Diagnostic)
-        run: |
-          echo "Configured AWS_REGION: ${{ env.AWS_REGION }}"
-          echo "Configured ECS_CLUSTER: ${{ env.ECS_CLUSTER }}"
-          echo "Configured ECS_SERVICE: ${{ env.ECS_SERVICE }}"
-          echo "=== List of ECS Clusters in ${{ env.AWS_REGION }} ==="
-          aws ecs list-clusters --region ${{ env.AWS_REGION }}
-          echo "=== List of Services in cluster '${{ env.ECS_CLUSTER }}' ==="
-          aws ecs list-services --cluster ${{ env.ECS_CLUSTER }} --region ${{ env.AWS_REGION }} || true
 
       - name: Log in to Amazon ECR
         id: login-ecr
@@ -138,8 +128,8 @@ jobs:
         uses: aws-actions/amazon-ecs-deploy-task-definition@v2
         with:
           task-definition: ${{ steps.render-task-def.outputs.task-definition }}
-          service: ${{ env.ECS_SERVICE }}
-          cluster: ${{ env.ECS_CLUSTER }}
+          service: flashsale-task-service
+          cluster: flashsale-cluster
           wait-for-service-stability: true
 
       - name: Generate Deployment Summary
@@ -147,8 +137,8 @@ jobs:
         run: |
           echo "### 🚀 AWS ECS Deployment Summary" >> $GITHUB_STEP_SUMMARY
           echo "- **Commit SHA**: \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "- **AWS Region**: \`${{ env.AWS_REGION }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **AWS Region**: \`ap-south-1\`" >> $GITHUB_STEP_SUMMARY
           echo "- **ECR Image**: \`${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "- **ECS Cluster**: \`${{ env.ECS_CLUSTER }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "- **ECS Service**: \`${{ env.ECS_SERVICE }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **ECS Cluster**: \`flashsale-cluster\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **ECS Service**: \`flashsale-task-service\`" >> $GITHUB_STEP_SUMMARY
           echo "- **Status**: ${{ job.status == 'success' && '✅ Deployed Successfully' || '❌ Deployment Failed' }}" >> $GITHUB_STEP_SUMMARY

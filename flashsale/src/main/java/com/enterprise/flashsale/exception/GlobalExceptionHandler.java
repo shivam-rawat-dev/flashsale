@@ -53,10 +53,10 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<Map<String, Object>> handleIllegalArgument(IllegalArgumentException ex) {
-        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of(
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of(
                 "timestamp", Instant.now().toString(),
-                "status", HttpStatus.FORBIDDEN.value(),
-                "error", "FORBIDDEN",
+                "status", HttpStatus.BAD_REQUEST.value(),
+                "error", "BAD_REQUEST",
                 "message", ex.getMessage()
         ));
     }

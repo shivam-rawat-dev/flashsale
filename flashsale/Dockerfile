@@ -5,7 +5,8 @@ FROM maven:3.9-eclipse-temurin-17 AS build
 WORKDIR /app
 
 # Cache Maven dependencies layer
-COPY pom.xml .\nRUN mvn dependency:go-offline -B
+COPY pom.xml .
+RUN mvn dependency:go-offline -B
 
 # Copy source code and package executable jar
 COPY src ./src

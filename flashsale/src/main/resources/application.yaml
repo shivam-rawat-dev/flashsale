@@ -63,10 +63,17 @@ management:
   endpoint:
     health:
       show-details: always
+      probes:
+        enabled: true
   endpoints:
     web:
       exposure:
         include: health,metrics,prometheus,info
+  health:
+    rabbit:
+      enabled: false
+    kafka:
+      enabled: false
 
 resilience4j:
   circuitbreaker:

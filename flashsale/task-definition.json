@@ -12,6 +12,7 @@
       "name": "flashsale-backend",
       "image": "377131740118.dkr.ecr.ap-south-1.amazonaws.com/flashsale-backend:latest",
       "essential": true,
+      "memoryReservation": 1280,
       "portMappings": [
         {
           "containerPort": 8080,
@@ -57,6 +58,7 @@
       "name": "redis",
       "image": "redis:7-alpine",
       "essential": true,
+      "memoryReservation": 256,
       "command": [
         "redis-server",
         "--appendonly",
@@ -81,7 +83,8 @@
     {
       "name": "rabbitmq",
       "image": "rabbitmq:3-management",
-      "essential": true,
+      "essential": false,
+      "memoryReservation": 512,
       "environment": [
         { "name": "RABBITMQ_DEFAULT_USER", "value": "guest" },
         { "name": "RABBITMQ_DEFAULT_PASS", "value": "guest" }
@@ -110,7 +113,8 @@
     {
       "name": "kafka",
       "image": "confluentinc/cp-kafka:7.5.0",
-      "essential": true,
+      "essential": false,
+      "memoryReservation": 768,
       "environment": [
         { "name": "KAFKA_NODE_ID", "value": "1" },
         { "name": "KAFKA_LISTENER_SECURITY_PROTOCOL_MAP", "value": "CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT" },

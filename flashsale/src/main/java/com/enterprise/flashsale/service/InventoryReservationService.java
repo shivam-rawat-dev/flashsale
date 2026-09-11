@@ -53,12 +53,15 @@ public class InventoryReservationService {
         String reservationId = "RES-" + UUID.randomUUID();
         String inventoryKey = "inventory:" + request.getProductId();
         String reservationKey = "reservation:" + userId + ":" + request.getProductId();
+        String orderLookupKey = "flashsale:reservation:" + reservationId;
 
-        List<String> keys = List.of(inventoryKey, reservationKey);
+        List<String> keys = List.of(inventoryKey, reservationKey, orderLookupKey);
         Object[] args = new Object[]{
                 String.valueOf(request.getQuantity()),
                 String.valueOf(600), // 10-minute hold TTL
-                reservationId
+                reservationId,
+                String.valueOf(userId),
+                String.valueOf(request.getProductId())
         };
 
         Long result = redisTemplate.execute(reservationScript, keys, args);
@@ -125,6 +128,7 @@ public class InventoryReservationService {
             // Compensate Redis
             redisTemplate.opsForValue().increment(inventoryKey, request.getQuantity());
             redisTemplate.delete(reservationKey);
+            redisTemplate.delete(orderLookupKey);
             throw new RuntimeException("Failed to persist reservation", e);
         }
     }
@@ -144,9 +148,11 @@ public class InventoryReservationService {
             // Restore Redis stock & clear user hold
             String inventoryKey = "inventory:" + productId;
             String reservationKey = "reservation:" + reservation.getUserId() + ":" + productId;
+            String orderLookupKey = "flashsale:reservation:" + reservationId;
 
             redisTemplate.opsForValue().increment(inventoryKey, reservation.getQuantity());
             redisTemplate.delete(reservationKey);
+            redisTemplate.delete(orderLookupKey);
 
             log.info("Released {} units for product {} from expired reservation {}",
                     reservation.getQuantity(), productId, reservationId);

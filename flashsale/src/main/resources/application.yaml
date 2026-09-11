@@ -20,21 +20,35 @@ spring:
   # Spring Boot Redis Configuration
   data:
     redis:
-      host: ${REDIS_HOST:localhost}
-      port: ${REDIS_PORT:6379}
+      host: ${SPRING_DATA_REDIS_HOST:${REDIS_HOST:localhost}}
+      port: ${SPRING_DATA_REDIS_PORT:${REDIS_PORT:6379}}
       password: ${REDIS_PASSWORD:${SPRING_DATA_REDIS_PASSWORD:}}
       timeout: 3000ms
 
-  # RabbitMQ Configuration (Spring Boot standard properties)
+  # RabbitMQ Configuration (Resilient startup retries)
   rabbitmq:
     host: ${RABBITMQ_HOST:localhost}
     port: ${RABBITMQ_PORT:5672}
     username: ${RABBITMQ_USER:guest}
     password: ${RABBITMQ_PASSWORD:guest}
+    listener:
+      simple:
+        auto-startup: true
+        missing-queues-fatal: false
+        retry:
+          enabled: true
+          initial-interval: 3000ms
+          max-interval: 10000ms
+          max-attempts: 10
+    template:
+      retry:
+        enabled: true
+        initial-interval: 2000ms
+        max-attempts: 5
 
   # Apache Kafka Configuration
   kafka:
-    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:kafka:9092}
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.apache.kafka.common.serialization.StringSerializer
@@ -58,15 +72,22 @@ springdoc:
     tags-sorter: alpha
     try-it-out-enabled: true
 
-# Actuator Health Config
+# Actuator Health Config (Exclude optional sidecars from failing container health check)
 management:
   endpoint:
     health:
       show-details: always
+      probes:
+        enabled: true
   endpoints:
     web:
       exposure:
         include: health,metrics,prometheus,info
+  health:
+    rabbit:
+      enabled: false
+    kafka:
+      enabled: false
 
 resilience4j:
   circuitbreaker:

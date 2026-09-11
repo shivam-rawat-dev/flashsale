@@ -118,8 +118,8 @@ $checkoutHeaders = @{
 }
 $checkoutBody = @{
     reservationId = $reservationId
-    itemId        = $productId
-    amount        = 49.99
+    itemId        = [long]$productId
+    amount        = [double]49.99
 } | ConvertTo-Json
 
 try {
@@ -127,6 +127,13 @@ try {
     Write-Host " ✅ Order Placed Successfully with Idempotency Key ($idempotencyKey)!" -ForegroundColor Green
     Write-Host "    - Order ID: $($checkoutRes.orderId)" -ForegroundColor DarkGreen
     Write-Host "    - Status: $($checkoutRes.status)" -ForegroundColor DarkGreen
+} catch [System.Net.WebException] {
+    $respStream = $_.Exception.Response.GetResponseStream()
+    $reader = New-Object System.IO.StreamReader($respStream)
+    $respBody = $reader.ReadToEnd()
+    Write-Host " ❌ Checkout failed: $($_.Exception.Message)" -ForegroundColor Red
+    Write-Host "    Server Response Body: $respBody" -ForegroundColor Red
+    exit 1
 } catch {
     Write-Host " ❌ Checkout failed: $_" -ForegroundColor Red
     exit 1

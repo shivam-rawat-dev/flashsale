@@ -39,8 +39,8 @@ public class SecurityConfig {
                                 "/swagger-resources/**",
                                 "/webjars/**"
                         ).permitAll()
-                        .requestMatchers("/api/v1/inventory", "/api/v1/inventory/**").hasRole("ADMIN")
-                        .requestMatchers("/api/v1/orders", "/api/v1/orders/**", "/api/v1/reservations", "/api/v1/reservations/**").hasAnyRole("USER", "ADMIN")
+                        .requestMatchers("/api/v1/inventory/**").hasAnyAuthority("ROLE_ADMIN", "ADMIN")
+                        .requestMatchers("/api/v1/orders/**", "/api/v1/reservations/**").hasAnyAuthority("ROLE_USER", "USER", "ROLE_ADMIN", "ADMIN")
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);

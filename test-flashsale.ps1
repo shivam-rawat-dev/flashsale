@@ -123,16 +123,22 @@ $checkoutBody = @{
 } | ConvertTo-Json
 
 try {
-    $checkoutRes = Invoke-RestMethod -Uri "$BaseUrl/api/v1/orders/checkout" -Method Post -Headers $checkoutHeaders -Body $checkoutBody -ContentType "application/json"
+    $checkoutRes = Invoke-WebRequest -Uri "$BaseUrl/api/v1/orders/checkout" -Method Post -Headers $checkoutHeaders -Body $checkoutBody -ContentType "application/json"
+    $checkoutJson = $checkoutRes.Content | ConvertFrom-Json
     Write-Host " ✅ Order Placed Successfully with Idempotency Key ($idempotencyKey)!" -ForegroundColor Green
-    Write-Host "    - Order ID: $($checkoutRes.orderId)" -ForegroundColor DarkGreen
-    Write-Host "    - Status: $($checkoutRes.status)" -ForegroundColor DarkGreen
+    Write-Host "    - Order ID: $($checkoutJson.orderId)" -ForegroundColor DarkGreen
+    Write-Host "    - Status: $($checkoutJson.status)" -ForegroundColor DarkGreen
 } catch [System.Net.WebException] {
-    $respStream = $_.Exception.Response.GetResponseStream()
-    $reader = New-Object System.IO.StreamReader($respStream)
-    $respBody = $reader.ReadToEnd()
-    Write-Host " ❌ Checkout failed: $($_.Exception.Message)" -ForegroundColor Red
-    Write-Host "    Server Response Body: $respBody" -ForegroundColor Red
+    $resp = $_.Exception.Response
+    if ($resp) {
+        $stream = $resp.GetResponseStream()
+        $reader = New-Object System.IO.StreamReader($stream)
+        $respBody = $reader.ReadToEnd()
+        Write-Host " ❌ Checkout failed: Status $([int]$resp.StatusCode) ($($resp.StatusCode))" -ForegroundColor Red
+        Write-Host "    Response Body: $respBody" -ForegroundColor Red
+    } else {
+        Write-Host " ❌ Checkout failed: $_" -ForegroundColor Red
+    }
     exit 1
 } catch {
     Write-Host " ❌ Checkout failed: $_" -ForegroundColor Red

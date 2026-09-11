@@ -34,12 +34,14 @@ public class OrderController {
     })
     public ResponseEntity<Map<String, Object>> checkout(
             @Parameter(description = "User ID placing the order", example = "1001")
-            @RequestHeader(value = "X-User-Id", defaultValue = "1001") Long userId,
+            @RequestHeader(value = "X-User-Id", required = false) Long userId,
             @Valid @RequestBody CheckoutRequest request) {
+
+        Long effectiveUserId = userId != null ? userId : 1001L;
 
         String orderId = orderService.checkout(
                 request.reservationId(),
-                userId,
+                effectiveUserId,
                 request.itemId(),
                 request.amount()
         );

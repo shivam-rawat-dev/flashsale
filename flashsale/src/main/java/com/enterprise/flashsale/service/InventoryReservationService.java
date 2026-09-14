@@ -8,9 +8,11 @@ import com.enterprise.flashsale.entity.Reservation.ReservationStatus;
 import com.enterprise.flashsale.entity.TransactionalOutbox;
 import com.enterprise.flashsale.exception.DuplicateReservationException;
 import com.enterprise.flashsale.exception.SoldOutException;
+import com.enterprise.flashsale.metrics.FlashSaleMetrics;
 import com.enterprise.flashsale.repository.OutboxRepository;
 import com.enterprise.flashsale.repository.ReservationRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.micrometer.core.instrument.Timer;
 import jakarta.annotation.PostConstruct;
 import lombok.*;
 import lombok.extern.slf4j.Slf4j;
@@ -38,6 +40,7 @@ public class InventoryReservationService {
     private final ReservationRepository reservationRepository;
     private final OutboxRepository outboxRepository;
     private final ObjectMapper objectMapper;
+    private final FlashSaleMetrics metrics;
 
     private DefaultRedisScript<Long> reservationScript;
 
@@ -50,6 +53,7 @@ public class InventoryReservationService {
 
     @Transactional
     public ReservationResponse reserveStock(Long userId, ReservationRequest request) {
+        Timer.Sample sample = metrics.startReservationTimer();
         String reservationId = "RES-" + UUID.randomUUID();
         String inventoryKey = "inventory:" + request.getProductId();
         String reservationKey = "reservation:" + userId + ":" + request.getProductId();
@@ -64,17 +68,21 @@ public class InventoryReservationService {
                 String.valueOf(request.getProductId())
         };
 
-        Long result = redisTemplate.execute(reservationScript, keys, args);
-
-        if (result == null || result == -1L) {
-            throw new IllegalStateException("Product inventory not initialized in cache");
-        } else if (result == 0L) {
-            throw new SoldOutException("Flash sale item is sold out or insufficient stock remaining");
-        } else if (result == -2L) {
-            throw new DuplicateReservationException("User already holds an active reservation for this product");
-        }
-
         try {
+            Long result = redisTemplate.execute(reservationScript, keys, args);
+
+            if (result == null || result == -1L) {
+                metrics.incrementReservationFailed();
+                throw new IllegalStateException("Product inventory not initialized in cache");
+            } else if (result == 0L) {
+                metrics.incrementSoldOut();
+                metrics.incrementReservationFailed();
+                throw new SoldOutException("Flash sale item is sold out or insufficient stock remaining");
+            } else if (result == -2L) {
+                metrics.incrementReservationFailed();
+                throw new DuplicateReservationException("User already holds an active reservation for this product");
+            }
+
             Instant now = Instant.now();
             Instant expiresAt = now.plusSeconds(600);
 
@@ -92,11 +100,11 @@ public class InventoryReservationService {
 
             // 2. Build Event matching FlashSaleOrderEvent schema
             FlashSaleOrderEvent orderEvent = FlashSaleOrderEvent.builder()
-                    .orderId(reservationId) // Carries reservation reference for downstream consumers
+                    .orderId(reservationId)
                     .productId(request.getProductId())
                     .userId(userId)
                     .quantity(request.getQuantity())
-                    .price(BigDecimal.ZERO) // Populated by pricing service or set during order stage
+                    .price(BigDecimal.ZERO)
                     .timestamp(System.currentTimeMillis())
                     .build();
 
@@ -112,6 +120,8 @@ public class InventoryReservationService {
                     .build();
             outboxRepository.save(outbox);
 
+            metrics.incrementReservationSuccess();
+
             // 4. Return matching ReservationResponse
             return ReservationResponse.builder()
                     .reservationId(reservationId)
@@ -123,13 +133,17 @@ public class InventoryReservationService {
                     .message("Inventory reserved successfully. Please complete payment within 10 minutes.")
                     .build();
 
+        } catch (SoldOutException | DuplicateReservationException | IllegalStateException e) {
+            throw e;
         } catch (Exception e) {
+            metrics.incrementReservationFailed();
             log.error("Database save failed for reservation {}. Compensating Redis hold.", reservationId, e);
-            // Compensate Redis
             redisTemplate.opsForValue().increment(inventoryKey, request.getQuantity());
             redisTemplate.delete(reservationKey);
             redisTemplate.delete(orderLookupKey);
             throw new RuntimeException("Failed to persist reservation", e);
+        } finally {
+            metrics.stopReservationTimer(sample);
         }
     }
 

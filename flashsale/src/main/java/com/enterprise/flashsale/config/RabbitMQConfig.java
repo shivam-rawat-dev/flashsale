@@ -1,6 +1,10 @@
 package com.enterprise.flashsale.config;
 
 import org.springframework.amqp.core.*;
+import org.springframework.amqp.rabbit.config.SimpleRabbitListenerContainerFactory;
+import org.springframework.amqp.rabbit.connection.ConnectionFactory;
+import org.springframework.amqp.rabbit.core.RabbitAdmin;
+import org.springframework.boot.autoconfigure.amqp.SimpleRabbitListenerContainerFactoryConfigurer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -20,6 +24,24 @@ public class RabbitMQConfig {
     public static final String ORDER_ROUTING_KEY = "order.create";
     public static final String RESERVATION_HOLD_ROUTING_KEY = "reservation.hold";
     public static final String RESERVATION_TIMEOUT_ROUTING_KEY = "reservation.timeout";
+
+    @Bean
+    public RabbitAdmin rabbitAdmin(ConnectionFactory connectionFactory) {
+        RabbitAdmin admin = new RabbitAdmin(connectionFactory);
+        admin.setIgnoreDeclarationExceptions(true);
+        return admin;
+    }
+
+    @Bean
+    public SimpleRabbitListenerContainerFactory rabbitListenerContainerFactory(
+            SimpleRabbitListenerContainerFactoryConfigurer configurer,
+            ConnectionFactory connectionFactory) {
+        SimpleRabbitListenerContainerFactory factory = new SimpleRabbitListenerContainerFactory();
+        configurer.configure(factory, connectionFactory);
+        factory.setMissingQueuesFatal(false);
+        factory.setAutoStartup(true);
+        return factory;
+    }
 
     @Bean
     public DirectExchange flashSaleExchange() {

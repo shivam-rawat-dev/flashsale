@@ -2,6 +2,7 @@ package com.enterprise.flashsale.security;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.http.HttpStatus;
 import org.springframework.lang.NonNull;
@@ -9,8 +10,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.HandlerInterceptor;
 
-import java.time.Duration;
-
+@Slf4j
 @Component
 public class IdempotencyInterceptor implements HandlerInterceptor {
 
@@ -42,8 +42,14 @@ public class IdempotencyInterceptor implements HandlerInterceptor {
 
         String idempotencyKey = request.getHeader(IDEMPOTENCY_HEADER);
         if (idempotencyKey == null || idempotencyKey.isBlank()) {
+            idempotencyKey = request.getHeader(IDEMPOTENCY_HEADER.toLowerCase());
+        }
+
+        if (idempotencyKey == null || idempotencyKey.isBlank()) {
+            log.warn("Missing required header: {}", IDEMPOTENCY_HEADER);
             response.setStatus(HttpStatus.BAD_REQUEST.value());
-            response.getWriter().write("Missing required header: " + IDEMPOTENCY_HEADER);
+            response.setContentType("application/json");
+            response.getWriter().write("{\"error\":\"BAD_REQUEST\",\"message\":\"Missing required header: " + IDEMPOTENCY_HEADER + "\"}");
             return false;
         }
 
@@ -54,12 +60,8 @@ public class IdempotencyInterceptor implements HandlerInterceptor {
             response.setStatus(HttpStatus.OK.value());
             response.setContentType("application/json");
             response.getWriter().write(cachedResponse);
-            return false; // Request already processed, return cached response
+            return false;
         }
-
-        // If not cached, we can wrap the response or let it process.
-        // For production, a ContentCachingResponseWrapper is commonly used to capture the output,
-        // or the service layer records the state against the idempotency key.
 
         return true;
     }

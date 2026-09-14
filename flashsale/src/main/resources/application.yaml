@@ -25,40 +25,17 @@ spring:
       password: ${REDIS_PASSWORD:${SPRING_DATA_REDIS_PASSWORD:}}
       timeout: 3000ms
 
-  # RabbitMQ Configuration (Resilient startup retries & deferred auto-startup)
-  rabbitmq:
-    host: ${RABBITMQ_HOST:localhost}
-    port: ${RABBITMQ_PORT:5672}
-    username: ${RABBITMQ_USER:guest}
-    password: ${RABBITMQ_PASSWORD:guest}
-    listener:
-      simple:
-        auto-startup: false
-        missing-queues-fatal: false
-        retry:
-          enabled: true
-          initial-interval: 3000ms
-          max-interval: 10000ms
-          max-attempts: 10
-    template:
-      retry:
-        enabled: true
-        initial-interval: 2000ms
-        max-attempts: 5
-
   # Apache Kafka Configuration
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
-      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
     consumer:
-      group-id: flashsale-group
+      group-id: flashsale-order-group
       auto-offset-reset: earliest
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-    listener:
-      auto-startup: false
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
     admin:
       fail-fast: false
 
@@ -72,7 +49,7 @@ springdoc:
     tags-sorter: alpha
     try-it-out-enabled: true
 
-# Actuator Health Config (Exclude optional sidecars from failing container health check)
+# Actuator Health Config
 management:
   endpoint:
     health:
@@ -84,8 +61,6 @@ management:
       exposure:
         include: health,metrics,prometheus,info
   health:
-    rabbit:
-      enabled: false
     kafka:
       enabled: false
 

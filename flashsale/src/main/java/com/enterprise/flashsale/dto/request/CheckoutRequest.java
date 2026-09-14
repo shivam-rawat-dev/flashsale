@@ -18,5 +18,8 @@ public record CheckoutRequest(
 
         @NotNull(message = "Amount is required")
         @Schema(description = "Total purchase amount", example = "499.99", requiredMode = Schema.RequiredMode.REQUIRED)
-        BigDecimal amount
+        BigDecimal amount,
+
+        @Schema(description = "User ID placing the order", example = "1001")
+        Long userId
 ) {}

@@ -84,11 +84,11 @@ try {
 
 $reserveHeaders = @{
     Authorization = "Bearer $buyerToken"
-    "X-User-Id"   = "$buyerId"
 }
 $reserveBody = @{
     productId = $productId
     quantity  = 1
+    userId    = $buyerId
 } | ConvertTo-Json
 
 try {
@@ -113,21 +113,20 @@ Write-Host "`n[5/5] Checking Out Order (Reservation: $reservationId)..." -Foregr
 $idempotencyKey = [System.Guid]::NewGuid().ToString()
 $checkoutHeaders = @{
     Authorization        = "Bearer $buyerToken"
-    "X-User-Id"          = "$buyerId"
     "X-Idempotency-Key"  = $idempotencyKey
 }
 $checkoutBody = @{
     reservationId = $reservationId
     itemId        = [long]$productId
     amount        = [double]49.99
+    userId        = [long]$buyerId
 } | ConvertTo-Json
 
 try {
-    $checkoutRes = Invoke-WebRequest -Uri "$BaseUrl/api/v1/orders/checkout" -Method Post -Headers $checkoutHeaders -Body $checkoutBody -ContentType "application/json"
-    $checkoutJson = $checkoutRes.Content | ConvertFrom-Json
+    $checkoutRes = Invoke-RestMethod -Uri "$BaseUrl/api/v1/orders/checkout" -Method Post -Headers $checkoutHeaders -Body $checkoutBody -ContentType "application/json"
     Write-Host " ✅ Order Placed Successfully with Idempotency Key ($idempotencyKey)!" -ForegroundColor Green
-    Write-Host "    - Order ID: $($checkoutJson.orderId)" -ForegroundColor DarkGreen
-    Write-Host "    - Status: $($checkoutJson.status)" -ForegroundColor DarkGreen
+    Write-Host "    - Order ID: $($checkoutRes.orderId)" -ForegroundColor DarkGreen
+    Write-Host "    - Status: $($checkoutRes.status)" -ForegroundColor DarkGreen
 } catch [System.Net.WebException] {
     $resp = $_.Exception.Response
     if ($resp) {

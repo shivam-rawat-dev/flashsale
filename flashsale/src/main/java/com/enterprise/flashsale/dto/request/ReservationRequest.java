@@ -20,4 +20,7 @@ public class ReservationRequest {
     @Min(value = 1, message = "Quantity must be at least 1")
     @Schema(description = "Number of units to reserve", example = "1", defaultValue = "1")
     private Integer quantity = 1;
+
+    @Schema(description = "User ID placing the reservation", example = "1001")
+    private Long userId;
 }

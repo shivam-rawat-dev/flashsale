@@ -1,6 +1,8 @@
 package com.enterprise.flashsale.controller;
 
 import com.enterprise.flashsale.dto.request.CheckoutRequest;
+import com.enterprise.flashsale.entity.AppUser;
+import com.enterprise.flashsale.repository.UserRepository;
 import com.enterprise.flashsale.security.Idempotent;
 import com.enterprise.flashsale.service.OrderService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -11,6 +13,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
@@ -22,6 +25,7 @@ import java.util.Map;
 public class OrderController {
 
     private final OrderService orderService;
+    private final UserRepository userRepository;
 
     @PostMapping("/checkout")
     @Idempotent(ttlMinutes = 15)
@@ -33,11 +37,25 @@ public class OrderController {
             @ApiResponse(responseCode = "403", description = "Forbidden - Requires USER or ADMIN role")
     })
     public ResponseEntity<Map<String, Object>> checkout(
+            Authentication authentication,
             @Parameter(description = "User ID placing the order", example = "1001")
-            @RequestHeader(value = "X-User-Id", required = false) Long userId,
+            @RequestHeader(value = "X-User-Id", required = false) Long headerUserId,
             @Valid @RequestBody CheckoutRequest request) {
 
-        Long effectiveUserId = userId != null ? userId : 1001L;
+        Long effectiveUserId = null;
+        if (request.userId() != null) {
+            effectiveUserId = request.userId();
+        } else if (headerUserId != null) {
+            effectiveUserId = headerUserId;
+        } else if (authentication != null && authentication.getName() != null) {
+            effectiveUserId = userRepository.findByEmail(authentication.getName())
+                    .map(AppUser::getId)
+                    .orElse(null);
+        }
+
+        if (effectiveUserId == null) {
+            effectiveUserId = 1001L;
+        }
 
         String orderId = orderService.checkout(
                 request.reservationId(),

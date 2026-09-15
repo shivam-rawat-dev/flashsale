@@ -138,6 +138,7 @@ try {
 # Step 6: Payment Success Settlement Webhook
 # -------------------------------------------------------------------------
 Write-Host "`n[6/7] Simulating Payment Gateway Webhook (Settlement -> PAID)..." -ForegroundColor Yellow
+Start-Sleep -Milliseconds 500
 $paymentWebhookHeaders = @{
     Authorization       = "Bearer $buyerToken"
     "X-Idempotency-Key" = [System.Guid]::NewGuid().ToString()
@@ -151,6 +152,18 @@ try {
     # Verify order state query
     $orderObj = Invoke-RestMethod -Uri "$BaseUrl/api/v1/orders/$orderId" -Method Get -Headers $paymentWebhookHeaders
     Write-Host "    - Order State Verified: PaymentStatus = $($orderObj.paymentStatus)" -ForegroundColor DarkGreen
+} catch [System.Net.WebException] {
+    $resp = $_.Exception.Response
+    if ($resp) {
+        $stream = $resp.GetResponseStream()
+        $reader = New-Object System.IO.StreamReader($stream)
+        $respBody = $reader.ReadToEnd()
+        Write-Host " ❌ Payment settlement failed: Status $([int]$resp.StatusCode) ($($resp.StatusCode))" -ForegroundColor Red
+        Write-Host "    Response Body: $respBody" -ForegroundColor Red
+    } else {
+        Write-Host " ❌ Payment settlement failed: $_" -ForegroundColor Red
+    }
+    exit 1
 } catch {
     Write-Host " ❌ Payment settlement failed: $_" -ForegroundColor Red
     exit 1
@@ -173,6 +186,8 @@ try {
     $chk2 = Invoke-RestMethod -Uri "$BaseUrl/api/v1/orders/checkout" -Method Post -Headers @{ Authorization = "Bearer $buyer2Token"; "X-Idempotency-Key" = [System.Guid]::NewGuid().ToString() } -Body (@{ reservationId = $res2Id; itemId = [long]$productId; amount = 49.99; userId = [long]$buyer2Id } | ConvertTo-Json) -ContentType "application/json"
     $order2Id = $chk2.orderId
 
+    Start-Sleep -Milliseconds 500
+
     # 3. Trigger Payment Failed Webhook
     $failHeaders = @{ Authorization = "Bearer $buyer2Token"; "X-Idempotency-Key" = [System.Guid]::NewGuid().ToString() }
     $failRes = Invoke-RestMethod -Uri "$BaseUrl/api/v1/orders/$order2Id/payment-failed?reason=Insufficient+funds" -Method Post -Headers $failHeaders
@@ -180,6 +195,18 @@ try {
     Write-Host "    - Order ID: $($failRes.orderId)" -ForegroundColor DarkGreen
     Write-Host "    - Final Status: $($failRes.status)" -ForegroundColor DarkGreen
     Write-Host "    - Message: $($failRes.message)" -ForegroundColor DarkGreen
+} catch [System.Net.WebException] {
+    $resp = $_.Exception.Response
+    if ($resp) {
+        $stream = $resp.GetResponseStream()
+        $reader = New-Object System.IO.StreamReader($stream)
+        $respBody = $reader.ReadToEnd()
+        Write-Host " ❌ Compensation test failed: Status $([int]$resp.StatusCode) ($($resp.StatusCode))" -ForegroundColor Red
+        Write-Host "    Response Body: $respBody" -ForegroundColor Red
+    } else {
+        Write-Host " ❌ Compensation test failed: $_" -ForegroundColor Red
+    }
+    exit 1
 } catch {
     Write-Host " ❌ Compensation test failed: $_" -ForegroundColor Red
     exit 1

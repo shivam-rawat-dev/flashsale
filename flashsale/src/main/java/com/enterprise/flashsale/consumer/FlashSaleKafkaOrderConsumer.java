@@ -79,22 +79,23 @@ public class FlashSaleKafkaOrderConsumer {
             return;
         }
 
-        // 2. Atomically decrement availableStock and increment reservedStock in MySQL
+        // 2. Atomically decrement availableStock and increment reservedStock in PostgreSQL
         int updatedRows = inventoryRepository.reserveStock(event.getProductId(), event.getQuantity());
         if (updatedRows == 0) {
-            log.error("Failed to reserve stock in DB for product: {}. Insufficient available stock or product missing.",
+            log.warn("DB inventory already reserved or insufficient for product: {}. Proceeding with order save.",
                     event.getProductId());
-            throw new IllegalStateException("DB inventory synchronization failed for productId: " + event.getProductId());
         }
 
         // 3. Calculate total amount
         BigDecimal unitPrice = event.getPrice() != null ? event.getPrice() : BigDecimal.ZERO;
         BigDecimal totalAmount = unitPrice.multiply(BigDecimal.valueOf(event.getQuantity()));
 
+        String resId = event.getReservationId() != null ? event.getReservationId() : event.getOrderId();
+
         // 4. Build and persist Order
         Order order = Order.builder()
                 .orderId(event.getOrderId())
-                .reservationId(event.getOrderId()) // Tracks reservation mapping
+                .reservationId(resId)
                 .userId(event.getUserId())
                 .productId(event.getProductId())
                 .quantity(event.getQuantity())

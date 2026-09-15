@@ -14,6 +14,7 @@ import java.math.BigDecimal;
 @AllArgsConstructor
 public class FlashSaleOrderEvent implements Serializable {
     private String orderId;
+    private String reservationId;
     private Long productId;
     private Long userId;
     private Integer quantity;

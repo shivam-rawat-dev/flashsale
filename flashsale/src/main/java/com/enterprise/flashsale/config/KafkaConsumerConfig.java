@@ -19,6 +19,7 @@ import org.springframework.kafka.listener.DefaultErrorHandler;
 import org.springframework.kafka.support.serializer.DeserializationException;
 import org.springframework.kafka.support.serializer.ErrorHandlingDeserializer;
 import org.springframework.kafka.support.serializer.JsonDeserializer;
+import org.springframework.kafka.support.serializer.JsonSerializer;
 import org.springframework.util.backoff.ExponentialBackOff;
 
 import java.util.HashMap;
@@ -35,13 +36,12 @@ public class KafkaConsumerConfig {
     @Value("${spring.kafka.consumer.group-id:flashsale-order-group}")
     private String groupId;
 
-
     @Bean
     public ProducerFactory<String, Object> dltProducerFactory() {
         Map<String, Object> props = new HashMap<>();
         props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
         props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
-        props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JsonDeserializer.class);
+        props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JsonSerializer.class);
         props.put(ProducerConfig.ACKS_CONFIG, "all");
         props.put(ProducerConfig.RETRIES_CONFIG, 3);
         return new DefaultKafkaProducerFactory<>(props);
@@ -90,7 +90,7 @@ public class KafkaConsumerConfig {
     }
 
     // ------------------------------------------------------------------------
-    // 3. Consumer Factory (Using JacksonJsonDeserializer for Boot 4+)
+    // 3. Consumer Factory
     // ------------------------------------------------------------------------
     @Bean
     public ConsumerFactory<String, Object> consumerFactory() {

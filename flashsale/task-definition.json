@@ -20,16 +20,6 @@
           "protocol": "tcp"
         }
       ],
-      "dependsOn": [
-        {
-          "containerName": "redis",
-          "condition": "START"
-        },
-        {
-          "containerName": "kafka",
-          "condition": "START"
-        }
-      ],
       "environment": [
         { "name": "RDS_DB_URL", "value": "jdbc:postgresql://flashsale-db.ct4miysm8115.ap-south-1.rds.amazonaws.com:5432/postgres" },
         { "name": "RDS_DB_USERNAME", "value": "postgres" },
@@ -55,8 +45,10 @@
       "memoryReservation": 512,
       "command": [
         "redis-server",
+        "--save",
+        "",
         "--appendonly",
-        "yes"
+        "no"
       ],
       "portMappings": [
         {
@@ -94,7 +86,8 @@
         { "name": "KAFKA_CONTROLLER_LISTENER_NAMES", "value": "CONTROLLER" },
         { "name": "KAFKA_LOG_DIRS", "value": "/tmp/kraft-combined-logs" },
         { "name": "CLUSTER_ID", "value": "MkU3OEVBNTcwNTJENDM2Qk" },
-        { "name": "KAFKA_JVM_PERFORMANCE_OPTS", "value": "-Xms384m -Xmx768m" }
+        { "name": "KAFKA_AUTO_CREATE_TOPICS_ENABLE", "value": "true" },
+        { "name": "KAFKA_JVM_PERFORMANCE_OPTS", "value": "-Xms256m -Xmx512m" }
       ],
       "portMappings": [
         {

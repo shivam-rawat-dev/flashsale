@@ -13,8 +13,8 @@ flowchart TD
         Admin["System Administrators"]
     end
 
-    subgraph AWS_Cloud["AWS Cloud (ap-south-1)"]
-        ALB["Application Load Balancer\n(Port 80)"]
+    subgraph AWS_Cloud["AWS Cloud"]
+        ALB["Application Load Balancer\n(Port 80 / 443)"]
 
         subgraph ECS["AWS ECS Fargate Task"]
             Backend["Spring Boot 3 Backend\n(/api/v1/*, /actuator/*)"]
@@ -49,7 +49,7 @@ flowchart TD
 ### 1. Zero-Overbooking Hot Path Engine
 - **Redis Lua Scripting (`stock_deduct.lua`)**: Executes atomic stock decrement, user duplicate hold verification, and reservation token generation in a single atomic cycle (<10ms).
 - **Rate-Limiting & Idempotency**:
-  - `RateLimitFilter`: Token bucket rate-limiting extracting `X-Forwarded-For` from ALB headers.
+  - `RateLimitFilter`: Token bucket rate-limiting with client IP extraction.
   - `@Idempotent` annotation with Redis distributed locks preventing duplicate checkouts.
 
 ### 2. Event-Driven Order Pipeline (Apache Kafka)
@@ -58,7 +58,7 @@ flowchart TD
 - **Dead-Letter Topic (DLT)**: Automated dead-letter publishing (`flashsale-orders.DLT`) for unrecoverable errors with exponential backoff.
 
 ### 3. Automated Expiry & Stock Compensation
-- **Background Auto-Release Worker (`ReservationExpiryScheduler`)**: Runs every 5 seconds, identifies abandoned reservations past their 10-minute hold window, transitions DB status to `EXPIRED`, and atomically restores Redis stock (`INCRBY`).
+- **Background Auto-Release Worker (`ReservationExpiryScheduler`)**: Runs every 5 seconds, identifies abandoned reservations past their hold window, transitions DB status to `EXPIRED`, and atomically restores Redis stock (`INCRBY`).
 - **Payment Failure Compensation**: Restores PostgreSQL reserved ledger and Redis in-memory cache upon payment failure/cancellation.
 
 ### 4. Real-Time Observability
@@ -72,9 +72,8 @@ flowchart TD
 
 ---
 
-## 📡 Live Production Endpoints
+## 📡 API Endpoints
 
-- **ALB Base URL**: `http://flashsale-alb-1698354449.ap-south-1.elb.amazonaws.com`
 - **Health Check**: `GET /actuator/health`
 - **Prometheus Metrics**: `GET /actuator/prometheus`
 - **Swagger UI**: `GET /swagger-ui.html`
@@ -87,12 +86,11 @@ flowchart TD
 ### 1. Full 7-Stage End-to-End Test Suite
 Executes health checks, admin warmup, atomic buyer reservations, Kafka order dispatch, payment settlement, and stock compensation rollback:
 ```powershell
-cd C:\Users\Coffi\Downloads\flashsale
-.\test-flashsale.ps1 -BaseUrl "http://flashsale-alb-1698354449.ap-south-1.elb.amazonaws.com"
+# Run against local or deployed environment:
+.\test-flashsale.ps1 -BaseUrl "http://<YOUR_ENDPOINT_OR_LOCALHOST>:8080"
 ```
 
 ### 2. High-Concurrency Stress Test (500 Buyers vs 100 Stock)
 ```powershell
-cd C:\Users\Coffi\Downloads\flashsale
-.\stress-test.ps1 -BaseUrl "http://flashsale-alb-1698354449.ap-south-1.elb.amazonaws.com" -TotalBuyers 500 -TotalStock 100 -Concurrency 25
+.\stress-test.ps1 -BaseUrl "http://<YOUR_ENDPOINT_OR_LOCALHOST>:8080" -TotalBuyers 500 -TotalStock 100 -Concurrency 25
 ```

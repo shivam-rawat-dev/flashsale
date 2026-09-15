@@ -41,6 +41,14 @@ public class OrderService {
     private String flashSaleOrdersTopic;
 
     /**
+     * Retrieves an order by ID.
+     */
+    public Order getOrder(String orderId) {
+        return orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found: " + orderId));
+    }
+
+    /**
      * Validates reservation hold and publishes order event for asynchronous fulfillment.
      */
     public String checkout(String reservationId, Long userId, Long itemId, BigDecimal amount) {
@@ -126,5 +134,42 @@ public class OrderService {
         // Remove user rate-limit hold key
         redisTemplate.delete(USER_HOLD_KEY_PREFIX + order.getUserId() + ":" + order.getProductId());
         metrics.incrementPaymentSuccess();
+        log.info("Payment settled and confirmed for order {}", orderId);
+    }
+
+    /**
+     * Handles payment failure or user cancellation by rolling back reserved stock.
+     */
+    @Transactional
+    public void handlePaymentFailure(String orderId, String failureReason) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found: " + orderId));
+
+        if (order.getPaymentStatus() == OrderStatus.CANCELLED || order.getPaymentStatus() == OrderStatus.PAID) {
+            return; // Idempotent exit
+        }
+
+        order.setPaymentStatus(OrderStatus.CANCELLED);
+        orderRepository.save(order);
+
+        // Update reservation to RELEASED
+        reservationRepository.findById(order.getReservationId()).ifPresent(reservation -> {
+            reservation.setStatus(ReservationStatus.RELEASED);
+            reservationRepository.save(reservation);
+        });
+
+        // 1. Release reserved stock back to available stock in DB
+        inventoryRepository.releaseReservedStock(order.getProductId(), order.getQuantity());
+
+        // 2. Replenish Redis cache
+        String inventoryKey = "inventory:" + order.getProductId();
+        redisTemplate.opsForValue().increment(inventoryKey, order.getQuantity());
+
+        // 3. Clear user hold key in Redis
+        redisTemplate.delete(USER_HOLD_KEY_PREFIX + order.getUserId() + ":" + order.getProductId());
+
+        metrics.incrementPaymentFailure();
+        log.warn("Payment failed for order {}: {}. Successfully rolled back {} stock units for product {}.",
+                orderId, failureReason, order.getQuantity(), order.getProductId());
     }
 }

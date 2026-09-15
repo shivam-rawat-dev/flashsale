@@ -168,6 +168,7 @@ public class InventoryReservationService {
             redisTemplate.delete(reservationKey);
             redisTemplate.delete(orderLookupKey);
 
+            metrics.incrementReservationExpired();
             log.info("Released {} units for product {} from expired reservation {}",
                     reservation.getQuantity(), productId, reservationId);
         }

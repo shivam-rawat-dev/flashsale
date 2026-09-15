@@ -16,6 +16,7 @@ public class FlashSaleMetrics {
     private final Counter orderSoldOutCounter;
     private final Counter reservationSuccessCounter;
     private final Counter reservationFailedCounter;
+    private final Counter reservationExpiredCounter;
     private final Counter paymentSuccessCounter;
     private final Counter paymentFailureCounter;
     private final Timer reservationTimer;
@@ -38,6 +39,10 @@ public class FlashSaleMetrics {
 
         this.reservationFailedCounter = Counter.builder("flashsale.reservations.failed")
                 .description("Total number of failed reservation attempts")
+                .register(registry);
+
+        this.reservationExpiredCounter = Counter.builder("flashsale.reservations.expired")
+                .description("Total number of expired and automatically released reservations")
                 .register(registry);
 
         this.paymentSuccessCounter = Counter.builder("flashsale.payments.success")
@@ -77,18 +82,29 @@ public class FlashSaleMetrics {
         reservationFailedCounter.increment();
     }
 
+    public void incrementReservationExpired() {
+        reservationExpiredCounter.increment();
+        if (activeReservationsGauge.get() > 0) {
+            activeReservationsGauge.decrementAndGet();
+        }
+    }
+
     public void incrementSoldOut() {
         orderSoldOutCounter.increment();
     }
 
     public void incrementPaymentSuccess() {
         paymentSuccessCounter.increment();
-        activeReservationsGauge.decrementAndGet();
+        if (activeReservationsGauge.get() > 0) {
+            activeReservationsGauge.decrementAndGet();
+        }
     }
 
     public void incrementPaymentFailure() {
         paymentFailureCounter.increment();
-        activeReservationsGauge.decrementAndGet();
+        if (activeReservationsGauge.get() > 0) {
+            activeReservationsGauge.decrementAndGet();
+        }
     }
 
     public Timer.Sample startReservationTimer() {

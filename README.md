@@ -1,65 +1,98 @@
-# ⚡ FlashSale - Distributed Inventory Allocation Engine
+# ⚡ FlashSale: Enterprise Distributed Flash Sale System
 
-A high-concurrency, low-latency distributed flash sale backend engine built with **Spring Boot 3**, **PostgreSQL**, **Redis** (atomic Lua reservation), **RabbitMQ** (delayed exchange for TTL rollback), and **Apache Kafka** (order processing & event sourcing).
-
----
-
-## 📖 Swagger / OpenAPI Documentation
-
-Interactive OpenAPI 3.0 documentation is built-in:
-- **Swagger UI**: `http://localhost:8080/swagger-ui.html`
-- **OpenAPI JSON Spec**: `http://localhost:8080/v3/api-docs`
+A high-concurrency, fault-tolerant Flash Sale and E-Commerce platform built with **Spring Boot 3, Apache Kafka, Redis, PostgreSQL, and AWS ECS Fargate**, engineered to handle massive burst traffic with a **Zero-Overbooking Guarantee**.
 
 ---
 
-## 🚀 CI/CD Pipeline (GitHub Actions ➔ AWS ECS)
+## 🏛️ System Architecture
 
-The project includes an automated, production-grade CI/CD pipeline configured at [`.github/workflows/ci-cd.yml`](.github/workflows/ci-cd.yml).
+```mermaid
+flowchart TD
+    subgraph Clients["Clients & Competing Buyers"]
+        Buyer["Flash Sale Buyers"]
+        Admin["System Administrators"]
+    end
 
-### Pipeline Stages
+    subgraph AWS_Cloud["AWS Cloud (ap-south-1)"]
+        ALB["Application Load Balancer\n(Port 80)"]
 
-1. **Continuous Integration (`ci-build-and-test`)**:
-   - Runs on every `push` to `main` and all `pull_request` events to `main`.
-   - Sets up JDK 17 with Maven dependency caching.
-   - Executes automated tests and compiles release JAR artifacts.
+        subgraph ECS["AWS ECS Fargate Task"]
+            Backend["Spring Boot 3 Backend\n(/api/v1/*, /actuator/*)"]
+            Redis["Redis 7 (In-Memory)\n- stock_deduct.lua\n- Idempotency Locks\n- In-Flight Holds"]
+            Kafka["Apache Kafka (KRaft Mode)\n- Topic: flashsale-orders\n- Topic: flashsale-orders.DLT"]
+        end
 
-2. **Continuous Delivery (`cd-deploy-to-aws`)**:
-   - Triggers automatically after tests pass on `main` branch push or via manual `workflow_dispatch`.
-   - Authenticates to AWS using **OpenID Connect (OIDC)** (or fallback IAM access keys).
-   - Authenticates to **Amazon ECR** (Elastic Container Registry).
-   - Builds optimized multi-stage Docker container with GitHub Actions caching (`gha`).
-   - Tags container image with both immutable Git commit SHA (`${{ github.sha }}`) and `latest`.
-   - Renders and deploys the updated task definition to **Amazon ECS Fargate** with zero-downtime rolling deployment.
+        subgraph Storage["Managed Persistence"]
+            RDS[("Amazon RDS PostgreSQL\n- Inventory Ledger\n- Reservations\n- Orders & Outbox")]
+        end
+    end
 
----
+    Buyer -->|HTTP Requests| ALB
+    Admin -->|Warmup & Admin Ops| ALB
+    ALB --> Backend
 
-### ⚙️ GitHub Secrets & Variables Configuration
-
-Configure the following under **GitHub Repository Settings ➔ Secrets and variables ➔ Actions**:
-
-#### 1. Repository Secrets (`Secrets`)
-| Secret Name | Description | Example / Recommended |
-|---|---|---|
-| `AWS_ROLE_TO_ASSUME` | *(Recommended)* AWS IAM Role ARN for GitHub OIDC | `arn:aws:iam::123456789012:role/GitHubActionsECRDeploymentRole` |
-| `AWS_ACCESS_KEY_ID` | *(Alternative)* AWS IAM User Access Key | `AKIA...` (if not using OIDC) |
-| `AWS_SECRET_ACCESS_KEY` | *(Alternative)* AWS IAM User Secret Key | `wJalrXUtnFEMI...` (if not using OIDC) |
-
-#### 2. Repository Variables (`Variables`)
-| Variable Name | Default Value | Description |
-|---|---|---|
-| `AWS_REGION` | `us-east-1` | Target AWS deployment region |
-| `ECR_REPOSITORY` | `flashsale-backend` | Amazon ECR repository name |
-| `ECS_CLUSTER` | `flashsale-cluster` | Amazon ECS cluster name |
-| `ECS_SERVICE` | `flashsale-service` | Amazon ECS Fargate service name |
+    %% Hot Path
+    Backend -->|1. Atomic Lua Check & Decrement| Redis
+    Backend -->|2. Persist Reservation & Outbox| RDS
+    
+    %% Cold Path
+    Backend -->|3. Publish Order Event| Kafka
+    Kafka -->|4. Consume & Deduct Ledger| Backend
+    Backend -->|5. Settle Payment / Rollback| RDS
+    Backend -->|6. Compensate Stock on Expiry| Redis
+```
 
 ---
 
-## 🐳 Local Development Setup
+## 🚀 Key Architectural Pillars
 
-Run the full infrastructure stack locally via Docker Compose:
+### 1. Zero-Overbooking Hot Path Engine
+- **Redis Lua Scripting (`stock_deduct.lua`)**: Executes atomic stock decrement, user duplicate hold verification, and reservation token generation in a single atomic cycle (<10ms).
+- **Rate-Limiting & Idempotency**:
+  - `RateLimitFilter`: Token bucket rate-limiting extracting `X-Forwarded-For` from ALB headers.
+  - `@Idempotent` annotation with Redis distributed locks preventing duplicate checkouts.
 
-```bash
-cd flashsale
-docker-compose up -d postgres redis rabbitmq kafka
-./mvnw spring-boot:run
+### 2. Event-Driven Order Pipeline (Apache Kafka)
+- **Unified Kafka Architecture**: Processes asynchronous order dispatch via `flashsale-orders` topic.
+- **Consumer Group**: Multi-threaded concurrency with transactional DB persistence.
+- **Dead-Letter Topic (DLT)**: Automated dead-letter publishing (`flashsale-orders.DLT`) for unrecoverable errors with exponential backoff.
+
+### 3. Automated Expiry & Stock Compensation
+- **Background Auto-Release Worker (`ReservationExpiryScheduler`)**: Runs every 5 seconds, identifies abandoned reservations past their 10-minute hold window, transitions DB status to `EXPIRED`, and atomically restores Redis stock (`INCRBY`).
+- **Payment Failure Compensation**: Restores PostgreSQL reserved ledger and Redis in-memory cache upon payment failure/cancellation.
+
+### 4. Real-Time Observability
+- **Prometheus Endpoint**: `GET /actuator/prometheus`
+- **Micrometer Metrics**:
+  - `flashsale.reservation.latency` (P50, P95, P99)
+  - `flashsale.checkout.latency` (P50, P95, P99)
+  - `flashsale.reservations.active` (In-flight gauge)
+  - `flashsale.reservations.success` / `failed` / `expired`
+  - `flashsale.orders.success` / `soldout`
+
+---
+
+## 📡 Live Production Endpoints
+
+- **ALB Base URL**: `http://flashsale-alb-1698354449.ap-south-1.elb.amazonaws.com`
+- **Health Check**: `GET /actuator/health`
+- **Prometheus Metrics**: `GET /actuator/prometheus`
+- **Swagger UI**: `GET /swagger-ui.html`
+- **OpenAPI Spec**: `GET /v3/api-docs`
+
+---
+
+## 🧪 Testing & Verification Scripts
+
+### 1. Full 7-Stage End-to-End Test Suite
+Executes health checks, admin warmup, atomic buyer reservations, Kafka order dispatch, payment settlement, and stock compensation rollback:
+```powershell
+cd C:\Users\Coffi\Downloads\flashsale
+.\test-flashsale.ps1 -BaseUrl "http://flashsale-alb-1698354449.ap-south-1.elb.amazonaws.com"
+```
+
+### 2. High-Concurrency Stress Test (500 Buyers vs 100 Stock)
+```powershell
+cd C:\Users\Coffi\Downloads\flashsale
+.\stress-test.ps1 -BaseUrl "http://flashsale-alb-1698354449.ap-south-1.elb.amazonaws.com" -TotalBuyers 500 -TotalStock 100 -Concurrency 25
 ```
